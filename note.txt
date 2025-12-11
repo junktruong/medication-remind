@@ -1,0 +1,6 @@
+mục tiêu  : thông báo dễ nhận diện , toàn màn hình , hiển thị thuốc , âm báo lời nhắc uống thuốc 
+             thêm nếu được có thể xem ảnh thuốc , hoặc cam soi xem thuốc gì 
+
+
+             insight : con luôn ở bên mẹ 
+             
