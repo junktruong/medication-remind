@@ -59,7 +59,8 @@ const styles = StyleSheet.create({
     label: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
     row: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        // justifyContent: '',
         gap: 8,
     },
     day: {
