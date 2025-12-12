@@ -33,19 +33,19 @@ const TextInputField: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-    container: { marginBottom: 16 },
-    label: { fontSize: 14, marginBottom: 6, color: '#333' },
+    container: { marginBottom: 18 },
+    label: { fontSize: 18, marginBottom: 8, color: '#0f172a', fontWeight: '700' },
     input: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        fontSize: 16,
+        borderColor: '#cbd5e1',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 18,
         backgroundColor: '#fff',
     },
     multiline: {
-        minHeight: 80,
+        minHeight: 100,
         textAlignVertical: 'top',
     },
 });

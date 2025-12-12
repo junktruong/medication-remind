@@ -44,6 +44,7 @@ const TimePickerField: React.FC<Props> = ({ schedules, onChange }) => {
                         {schedule.hour.toString().padStart(2, '0')}:
                         {schedule.minute.toString().padStart(2, '0')}
                     </Text>
+                    <Text style={styles.helper}>Chạm để chỉnh giờ</Text>
                 </TouchableOpacity>
             ) : (
                 <View style={styles.editRow}>
@@ -72,37 +73,39 @@ const TimePickerField: React.FC<Props> = ({ schedules, onChange }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { marginBottom: 16 },
-    label: { fontSize: 14, marginBottom: 6, color: '#333' },
+    container: { marginBottom: 18 },
+    label: { fontSize: 18, marginBottom: 8, color: '#0f172a', fontWeight: '700' },
     button: {
-        paddingVertical: 10,
-        paddingHorizontal: 14,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
+        borderColor: '#cbd5e1',
+        borderRadius: 12,
         alignSelf: 'flex-start',
+        backgroundColor: '#f8fafc',
     },
-    time: { fontSize: 16, color: '#007AFF', fontWeight: '600' },
-    editRow: { flexDirection: 'row', alignItems: 'center' },
+    time: { fontSize: 22, color: '#1d4ed8', fontWeight: '800', letterSpacing: 1 },
+    helper: { fontSize: 14, color: '#475569', marginTop: 4 },
+    editRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     input: {
-        width: 40,
+        width: 54,
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 6,
-        padding: 6,
+        borderColor: '#cbd5e1',
+        borderRadius: 10,
+        padding: 10,
         textAlign: 'center',
-        fontSize: 16,
+        fontSize: 18,
         backgroundColor: '#fff',
     },
-    colon: { fontSize: 18, marginHorizontal: 6 },
+    colon: { fontSize: 22, marginHorizontal: 4, fontWeight: '700', color: '#0f172a' },
     saveBtn: {
-        marginLeft: 10,
-        backgroundColor: '#007AFF',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 6,
+        marginLeft: 4,
+        backgroundColor: '#2563eb',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 10,
     },
-    saveText: { color: '#fff', fontWeight: '600' },
+    saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
 
 export default TimePickerField;

@@ -63,29 +63,29 @@ const PhotoSelector: React.FC<Props> = ({ uri, onChange }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { marginVertical: 16 },
-    label: { fontSize: 14, marginBottom: 6, color: '#333' },
-    image: { width: '100%', height: 180, borderRadius: 8, marginBottom: 10 },
+    container: { marginVertical: 18, gap: 10 },
+    label: { fontSize: 18, marginBottom: 4, color: '#0f172a', fontWeight: '700' },
+    image: { width: '100%', height: 220, borderRadius: 14, marginBottom: 6 },
     placeholder: {
         width: '100%',
-        height: 180,
+        height: 220,
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
+        borderColor: '#cbd5e1',
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10,
+        marginBottom: 6,
+        backgroundColor: '#f8fafc',
     },
-    placeholderText: { color: '#888' },
-    row: { flexDirection: 'row', justifyContent: 'space-between' },
+    placeholderText: { color: '#94a3b8', fontSize: 16 },
+    row: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
     btn: {
         flex: 1,
-        backgroundColor: '#007AFF',
-        paddingVertical: 10,
-        borderRadius: 8,
-        marginHorizontal: 4,
+        backgroundColor: '#0f172a',
+        paddingVertical: 14,
+        borderRadius: 12,
     },
-    btnText: { color: '#fff', textAlign: 'center', fontWeight: '600' },
+    btnText: { color: '#fff', textAlign: 'center', fontWeight: '700', fontSize: 16 },
 });
 
 export default PhotoSelector;

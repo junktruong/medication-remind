@@ -34,47 +34,55 @@ const DayOfWeekSelector: React.FC<Props> = ({ schedules, onChange }) => {
     };
 
     return (
-        <View style={styles.row}>
-            {labels.map((label, idx) => {
-                const active = schedule.daysOfWeek.includes(idx as Weekday);
-                return (
-                    <TouchableOpacity
-                        key={idx}
-                        style={[styles.day, active && styles.active]}
-                        onPress={() => toggleDay(idx as Weekday)}
-                    >
-                        <Text style={[styles.text, active && styles.activeText]}>{label}</Text>
-                    </TouchableOpacity>
-                );
-            })}
+        <View style={styles.wrapper}>
+            <Text style={styles.label}>Chọn ngày trong tuần</Text>
+            <View style={styles.row}>
+                {labels.map((label, idx) => {
+                    const active = schedule.daysOfWeek.includes(idx as Weekday);
+                    return (
+                        <TouchableOpacity
+                            key={idx}
+                            style={[styles.day, active && styles.active]}
+                            onPress={() => toggleDay(idx as Weekday)}
+                        >
+                            <Text style={[styles.text, active && styles.activeText]}>{label}</Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
+    wrapper: { marginBottom: 16 },
+    label: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginVertical: 12,
+        gap: 8,
     },
     day: {
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: 8,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: '#cbd5e1',
+        backgroundColor: '#f8fafc',
+        minWidth: 48,
+        alignItems: 'center',
     },
     active: {
-        backgroundColor: '#007AFF22',
-        borderColor: '#007AFF',
+        backgroundColor: '#dbeafe',
+        borderColor: '#2563eb',
     },
     text: {
-        fontSize: 14,
-        color: '#333',
+        fontSize: 16,
+        color: '#0f172a',
+        fontWeight: '700',
     },
     activeText: {
-        color: '#007AFF',
-        fontWeight: '600',
+        color: '#1d4ed8',
     },
 });
 

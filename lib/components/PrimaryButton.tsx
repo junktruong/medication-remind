@@ -13,7 +13,7 @@ interface Props {
 const PrimaryButton: React.FC<Props> = ({ title, onPress, disabled, style, danger }) => {
     return (
         <TouchableOpacity
-            style={[styles.button, disabled && styles.disabled, style]}
+            style={[styles.button, danger && styles.danger, disabled && styles.disabled, style]}
             onPress={onPress}
             disabled={disabled}
             activeOpacity={0.7}
@@ -25,18 +25,27 @@ const PrimaryButton: React.FC<Props> = ({ title, onPress, disabled, style, dange
 
 const styles = StyleSheet.create({
     button: {
-        backgroundColor: '#007AFF',
-        paddingVertical: 12,
-        borderRadius: 8,
+        backgroundColor: '#2563eb',
+        paddingVertical: 16,
+        borderRadius: 14,
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    danger: {
+        backgroundColor: '#dc2626',
     },
     disabled: {
-        opacity: 0.5,
+        opacity: 0.6,
     },
     text: {
         color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 18,
+        fontWeight: '700',
+        letterSpacing: 0.2,
     },
 });
 
