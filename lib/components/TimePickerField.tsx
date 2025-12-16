@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { Weekday } from '../types/medication';
 
 // --- Types ---
 // Assuming this is the structure based on your provided code.
@@ -17,7 +18,7 @@ import {
 export interface MedicationSchedule {
     hour: number;
     minute: number;
-    daysOfWeek: number[]; // Assuming generic array for days
+    daysOfWeek: Weekday[]; // Assuming generic array for days
 }
 
 interface Props {
