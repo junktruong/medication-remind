@@ -35,6 +35,20 @@ export default function MedicationForm() {
         setSchedules((prev) => [...prev, { hour: 8, minute: 0, daysOfWeek: [] as Weekday[] }]);
     };
 
+    const copySchedule = () => {
+        setSchedules((prev) => {
+            if (!prev.length) return prev;
+
+            const last = prev[prev.length - 1];
+            const duplicate: MedicationSchedule = {
+                ...last,
+                daysOfWeek: [...last.daysOfWeek] as Weekday[],
+            };
+
+            return [...prev, duplicate];
+        });
+    };
+
     const removeSchedule = (index: number) => {
         setSchedules((prev) => prev.filter((_, i) => i !== index));
     };
@@ -95,9 +109,18 @@ export default function MedicationForm() {
 
                 <View style={styles.scheduleHeaderRow}>
                     <Text style={styles.sectionTitle}>Lịch uống</Text>
-                    <TouchableOpacity style={styles.addButton} onPress={addSchedule}>
-                        <Text style={styles.addButtonText}>+ Thêm giờ</Text>
-                    </TouchableOpacity>
+                    <View style={styles.scheduleActionRow}>
+                        <TouchableOpacity
+                            style={[styles.copyButton, !schedules.length && styles.copyButtonDisabled]}
+                            onPress={copySchedule}
+                            disabled={!schedules.length}
+                        >
+                            <Text style={[styles.copyButtonText, !schedules.length && styles.copyButtonTextDisabled]}>Copy schedule</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.addButton} onPress={addSchedule}>
+                            <Text style={styles.addButtonText}>+ Thêm giờ</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {schedules.map((schedule, index) => (
@@ -164,6 +187,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
     },
+    scheduleActionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+    },
     sectionTitle: {
         fontSize: fontSize.xl,
         fontWeight: '700',
@@ -175,10 +203,28 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.sm,
         borderRadius: radius.sm,
     },
+    copyButton: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.sm,
+        borderWidth: 1,
+        borderColor: colors.primary,
+    },
+    copyButtonDisabled: {
+        borderColor: colors.muted,
+    },
     addButtonText: {
         color: '#fff',
         fontWeight: '700',
         fontSize: fontSize.md,
+    },
+    copyButtonText: {
+        color: colors.primary,
+        fontWeight: '700',
+        fontSize: fontSize.md,
+    },
+    copyButtonTextDisabled: {
+        color: colors.muted,
     },
     actions: {
         gap: spacing.md,
