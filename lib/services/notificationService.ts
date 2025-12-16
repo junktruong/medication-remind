@@ -2,6 +2,11 @@
 import * as Notifications from 'expo-notifications';
 import { Medication } from '../types/medication';
 
+export type ScheduleNotificationResult = {
+    scheduleIdx: number;
+    ids: string[];
+};
+
 export async function requestNotificationPermission(): Promise<boolean> {
     try {
         const { status } = await Notifications.requestPermissionsAsync();
@@ -14,13 +19,19 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 export async function scheduleNotificationsForMedication(
     med: Medication
-): Promise<string[]> {
-    const ids: string[] = [];
+): Promise<ScheduleNotificationResult[]> {
+    const result: ScheduleNotificationResult[] = [];
+
+    if (!med.enabled) return result;
 
     try {
-        for (const schedule of med.schedules) {
+        med.schedules.forEach((_schedule, idx) => result.push({ scheduleIdx: idx, ids: [] }));
+
+        for (let index = 0; index < med.schedules.length; index++) {
+            const schedule = med.schedules[index];
+            const ids: string[] = [];
+
             for (const day of schedule.daysOfWeek) {
-                // Calendar trigger KHÔNG cần "type"
                 const trigger = {
                     weekday: day + 1,   // Expo: 1 = Sunday
                     hour: schedule.hour,
@@ -41,12 +52,14 @@ export async function scheduleNotificationsForMedication(
 
                 ids.push(id);
             }
+
+            result[index] = { scheduleIdx: index, ids };
         }
     } catch (err) {
         console.error('scheduleNotificationsForMedication error:', err);
     }
 
-    return ids;
+    return result;
 }
 
 export async function cancelNotifications(ids: string[]): Promise<void> {

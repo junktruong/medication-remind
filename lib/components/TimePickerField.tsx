@@ -10,20 +10,12 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Weekday } from '../types/medication';
-
-// --- Types ---
-// Assuming this is the structure based on your provided code.
-// If you import this from elsewhere, keep your import.
-export interface MedicationSchedule {
-    hour: number;
-    minute: number;
-    daysOfWeek: Weekday[]; // Assuming generic array for days
-}
+import { MedicationSchedule } from '../types/medication';
 
 interface Props {
-    schedules: MedicationSchedule[];
-    onChange: (schedules: MedicationSchedule[]) => void;
+    schedule: MedicationSchedule;
+    onChange: (schedule: MedicationSchedule) => void;
+    title?: string;
 }
 
 // --- Constants & Config ---
@@ -125,9 +117,9 @@ const WheelPicker: React.FC<WheelProps> = ({ items, initialIndex, onChange, labe
 };
 
 // --- Main Component ---
-const TimePickerField: React.FC<Props> = ({ schedules, onChange }) => {
+const TimePickerField: React.FC<Props> = ({ schedule, onChange, title }) => {
     // Ensure we have a schedule
-    const currentSchedule = schedules[0] ?? {
+    const currentSchedule = schedule ?? {
         hour: 8,
         minute: 0,
         daysOfWeek: [],
@@ -155,13 +147,13 @@ const TimePickerField: React.FC<Props> = ({ schedules, onChange }) => {
             hour: tempHour,
             minute: tempMinute,
         };
-        onChange([newSchedule]);
+        onChange(newSchedule);
         setModalVisible(false);
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.label}>Giờ uống</Text>
+            <Text style={styles.label}>{title ?? 'Giờ uống'}</Text>
 
             {/* Trigger Button */}
             <TouchableOpacity

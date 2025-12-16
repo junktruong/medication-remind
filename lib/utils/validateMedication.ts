@@ -1,7 +1,7 @@
 // lib/utils/validateMedication.ts
 import { MedicationInput } from '../context/MedicationContext';
 
-export function validateMedicationInput(input: MedicationInput): string {
+export function validateMedicationInput(input: MedicationInput): void {
     const errors: string[] = [];
 
     if (!input.name || input.name.trim() === '') {
@@ -10,7 +10,6 @@ export function validateMedicationInput(input: MedicationInput): string {
 
     if (!input.schedules || input.schedules.length === 0) {
         errors.push('Vui lòng chọn ít nhất 1 lịch');
-        return `[ ${errors.join(', ')} ]`;
     }
 
     input.schedules.forEach((s, i) => {
@@ -24,9 +23,6 @@ export function validateMedicationInput(input: MedicationInput): string {
     });
 
     if (errors.length > 0) {
-        return `[ ${errors.join(', ')} ]`;
-
-    } else {
-        return "";
+        throw new Error(`[ ${errors.join(', ')} ]`);
     }
 }
