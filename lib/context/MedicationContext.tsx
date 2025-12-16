@@ -132,7 +132,15 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const deleteMedication = async (id: string) => {
         const med = medications.find(m => m.id === id);
-        med?.schedules.forEach(s => s.notificationIds && cancelNotifications(s.notificationIds));
+
+        if (med?.schedules?.length) {
+            for (const schedule of med.schedules) {
+                if (schedule.notificationIds?.length) {
+                    await cancelNotifications(schedule.notificationIds);
+                }
+            }
+        }
+
         await deleteMedStorage(id);
         setMedications(prev => prev.filter(m => m.id !== id));
     };
@@ -158,6 +166,7 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 schedules: (med.schedules ?? []).map((schedule) => ({ ...schedule, notificationIds: [] })),
             };
         } else {
+            await requestNotificationPermission();
             const medWithNotif = await scheduleNotificationsForMedication({ ...updated, enabled: true });
             updated = medWithNotif;
         }

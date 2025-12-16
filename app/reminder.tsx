@@ -1,15 +1,16 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { Alert, Linking, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Alert, Linking, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useMedications } from '../lib/context/MedicationContext';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
 import { appendLog } from '../lib/services/intakeLog';
 import { formatTime, getNextDose } from '../lib/utils/scheduleHelpers';
 
+
 const childPhoto = require('../assets/images/react-logo.png');
-const defaultMedicationImage = require('../assets/images/react-logo@2x.png');
+const defaultMedicationImage = require('../assets/images/react-logo.png');
 
 export default function ReminderScreen() {
     const router = useRouter();
@@ -24,10 +25,10 @@ export default function ReminderScreen() {
                 const schedule = med.schedules?.[0];
                 const nextDate = schedule
                     ? (() => {
-                          const date = new Date();
-                          date.setHours(schedule.hour, schedule.minute, 0, 0);
-                          return date;
-                      })()
+                        const date = new Date();
+                        date.setHours(schedule.hour, schedule.minute, 0, 0);
+                        return date;
+                    })()
                     : new Date();
                 return med && schedule ? { medication: med, schedule, date: nextDate } : null;
             }
