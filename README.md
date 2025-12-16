@@ -1,50 +1,56 @@
-# Welcome to your Expo app 👋
+# Ứng dụng Nhắc Uống Thuốc (Tên Ứng Dụng Của Bạn) 💊
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Một ứng dụng di động/web được thiết kế để giúp người dùng quản lý lịch trình uống thuốc, đảm bảo dùng thuốc đúng liều và đúng giờ.
 
-## Get started
+---
 
-1. Install dependencies
+## 📸 Ảnh Chụp Màn Hình (Screenshots)
 
-   ```bash
-   npm install
-   ```
+Dưới đây là các ảnh chụp màn hình chính của ứng dụng để người dùng có cái nhìn trực quan về giao diện và chức năng.
 
-2. Start the app
+### 1. Trang Chính (Home Screen)
 
-   ```bash
-   npx expo start
-   ```
+Trang tổng quan hiển thị lịch uống thuốc sắp tới, trạng thái dùng thuốc trong ngày và các thông báo quan trọng.
 
-In the output, you'll find options to open the app in a
+![Ảnh chụp màn hình Trang Chính](/assets/rm/1.png)
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 2. Trang Nhắc Uống Thuốc (Medication Reminder Screen)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Màn hình chi tiết hiển thị danh sách các loại thuốc cần uống theo thời gian, cho phép người dùng đánh dấu đã uống.
 
-## Get a fresh project
+![Ảnh chụp màn hình Trang Nhắc Uống Thuốc](./assets/rm/2.png)
 
-When you're ready, run:
+### 3. Trang Nhập Thuốc - Bước 1 (Add Medication - Step 1)
 
-```bash
-npm run reset-project
-```
+Màn hình nhập thông tin cơ bản của thuốc (tên, liều lượng, tần suất).
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+![Ảnh chụp màn hình Trang Nhập Thuốc - Bước 1](./assets/rm/3.png)
 
-## Learn more
+### 4. Trang Nhập Thuốc - Bước 2 (Add Medication - Step 2)
 
-To learn more about developing your project with Expo, look at the following resources:
+Màn hình nhập chi tiết hơn về lịch trình (thời gian bắt đầu, số ngày dùng, các thời điểm cụ thể trong ngày).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+![Ảnh chụp màn hình Trang Nhập Thuốc - Bước 2](./assets//rm/4.png)
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## ✨ Tính Năng Nổi Bật
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+* **Quản lý Thuốc:** Thêm, chỉnh sửa và xóa thông tin thuốc dễ dàng.
+* **Thông báo Thông minh:** Nhắc nhở uống thuốc đúng giờ, tránh quên hoặc dùng thuốc quá liều.
+* **Theo dõi Lịch sử:** Ghi lại lịch sử dùng thuốc để theo dõi sự tuân thủ.
+
+---
+
+## 🛠 Hướng Dẫn Sử Dụng
+
+(Bạn có thể thêm phần hướng dẫn cài đặt và sử dụng ứng dụng của mình tại đây.)
+
+1. **Tải xuống và Cài đặt:** ...
+2. **Thêm Thuốc:** ...
+
+---
+
+## 🧑‍💻 Tác Giả & Cộng Tác
+
+* [Tên Của Bạn/Team] - [Liên kết đến Trang cá nhân/GitHub]
