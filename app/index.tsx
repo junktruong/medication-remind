@@ -1,15 +1,18 @@
 // app/index.tsx
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
 import { useMedications } from '../lib/context/MedicationContext';
 import { countTodayDoses, formatTime, getNextDose, getTodayDoses } from '../lib/utils/scheduleHelpers';
+import { AdherenceEntry, getLatestAdherence } from '../lib/services/adherenceStorage';
 
 export default function HomeScreen() {
     const router = useRouter();
     const { medications } = useMedications();
+    const [latestTaken, setLatestTaken] = useState<AdherenceEntry | null>(null);
 
     const todayCount = useMemo(() => countTodayDoses(medications), [medications]);
     const nextDose = useMemo(() => getNextDose(medications), [medications]);
@@ -24,6 +27,21 @@ export default function HomeScreen() {
         router.push('/medication/form');
     };
 
+    const openTestReminder = () => {
+        router.push({ pathname: '/reminder', params: { mock: 'true' } });
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const loadLatest = async () => {
+                const latest = await getLatestAdherence('taken');
+                setLatestTaken(latest);
+            };
+
+            loadLatest();
+        }, []),
+    );
+
     return (
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
@@ -36,6 +54,16 @@ export default function HomeScreen() {
                         <Text style={styles.addButtonText}>+ Thêm thuốc</Text>
                     </TouchableOpacity>
                 </View>
+
+                {latestTaken ? (
+                    <View style={styles.statusCard}>
+                        <Text style={styles.sectionLabel}>Lần uống gần nhất</Text>
+                        <Text style={styles.statusText}>
+                            ĐÃ HOÀN THÀNH {latestTaken.medicationName ?? 'liều thuốc'} lúc{' '}
+                            {formatTime(new Date(latestTaken.timestamp))}
+                        </Text>
+                    </View>
+                ) : null}
 
                 <View style={styles.nextCard}>
                     <Text style={styles.sectionLabel}>Lần uống tiếp theo</Text>
@@ -54,6 +82,9 @@ export default function HomeScreen() {
 
                             <TouchableOpacity style={styles.primaryAction} onPress={openReminder}>
                                 <Text style={styles.primaryActionText}>Mở nhắc uống</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.secondaryAction} onPress={openTestReminder}>
+                                <Text style={styles.secondaryText}>Test reminder</Text>
                             </TouchableOpacity>
                         </>
                     ) : (
@@ -131,6 +162,19 @@ const styles = StyleSheet.create({
     addButtonText: {
         color: '#0369a1',
         fontWeight: '700',
+    },
+    statusCard: {
+        backgroundColor: '#ecfeff',
+        borderRadius: radius.lg,
+        padding: spacing.lg,
+        borderWidth: 1,
+        borderColor: '#bae6fd',
+        gap: spacing.xs,
+    },
+    statusText: {
+        color: '#0f172a',
+        fontSize: fontSize.lg,
+        fontWeight: '800',
     },
     sectionLabel: {
         fontSize: fontSize.md,
