@@ -1,13 +1,15 @@
+import { Audio } from 'expo-av';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMedications } from '../lib/context/MedicationContext';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
 import { logAdherenceEvent, clearSnoozeState, isSnoozed, setSnoozeUntil } from '../lib/services/adherenceStorage';
+import { loadChildAudioUri, loadChildPhotoUri } from '../lib/services/childMediaStorage';
 import { loadChildPhone } from '../lib/services/contactStorage';
 import { requestNotificationPermission } from '../lib/services/notificationService';
 import { Weekday } from '../lib/types/medication';
@@ -22,6 +24,9 @@ export default function ReminderScreen() {
     const { medications } = useMedications();
     const [verificationPhoto, setVerificationPhoto] = useState<string | undefined>();
     const [childPhone, setChildPhone] = useState<string | null>(null);
+    const [childPhotoUri, setChildPhotoUri] = useState<string | null>(null);
+    const [childAudioUri, setChildAudioUri] = useState<string | null>(null);
+    const soundRef = useRef<Audio.Sound | null>(null);
 
     const isMock = params.mock === 'true';
 
@@ -69,13 +74,46 @@ export default function ReminderScreen() {
     const enableVerification = params.verify === 'true';
 
     useEffect(() => {
-        const loadPhone = async () => {
-            const stored = await loadChildPhone();
-            setChildPhone(stored);
+        const loadMedia = async () => {
+            const [storedPhone, storedPhoto, storedAudio] = await Promise.all([
+                loadChildPhone(),
+                loadChildPhotoUri(),
+                loadChildAudioUri(),
+            ]);
+            setChildPhone(storedPhone);
+            setChildPhotoUri(storedPhoto);
+            setChildAudioUri(storedAudio);
         };
 
-        loadPhone();
+        loadMedia();
+
+        return () => {
+            if (soundRef.current) {
+                soundRef.current.unloadAsync().catch(() => undefined);
+            }
+        };
     }, []);
+
+    useEffect(() => {
+        const playAudioOnce = async () => {
+            if (!childAudioUri) return;
+
+            try {
+                if (soundRef.current) {
+                    await soundRef.current.unloadAsync();
+                    soundRef.current = null;
+                }
+
+                const { sound } = await Audio.Sound.createAsync({ uri: childAudioUri });
+                soundRef.current = sound;
+                await sound.playAsync();
+            } catch (error) {
+                console.warn('playChildAudio error', error);
+            }
+        };
+
+        playAudioOnce();
+    }, [childAudioUri]);
 
     const handleTaken = async () => {
         if (!medication) return router.back();
@@ -180,6 +218,7 @@ export default function ReminderScreen() {
     };
 
     const medImage = medication?.photoUri ? { uri: medication.photoUri } : defaultMedicationImage;
+    const reminderPhoto = childPhotoUri ? { uri: childPhotoUri } : childPhoto;
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -188,7 +227,7 @@ export default function ReminderScreen() {
                 <View style={styles.hero}>
                     <Text style={styles.heroLabel}>Đã đến giờ nhắc con uống thuốc</Text>
                     <Text style={styles.heroTime}>{reminder?.date ? formatTime(reminder.date) : 'Ngay bây giờ'}</Text>
-                    <Image source={childPhoto} style={styles.childPhoto} contentFit="cover" />
+                    <Image source={reminderPhoto} style={styles.childPhoto} contentFit="cover" />
                 </View>
 
                 <View style={styles.card}>
