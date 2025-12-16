@@ -1,11 +1,6 @@
 // app/lib/services/notificationService.ts
 import * as Notifications from 'expo-notifications';
-import { Medication } from '../types/medication';
-
-export type ScheduleNotificationResult = {
-    scheduleIdx: number;
-    ids: string[];
-};
+import { Medication, MedicationSchedule } from '../types/medication';
 
 export async function requestNotificationPermission(): Promise<boolean> {
     try {
@@ -17,49 +12,60 @@ export async function requestNotificationPermission(): Promise<boolean> {
     }
 }
 
-export async function scheduleNotificationsForMedication(
-    med: Medication
-): Promise<ScheduleNotificationResult[]> {
-    const result: ScheduleNotificationResult[] = [];
+export async function scheduleNotificationsForSchedule(
+    med: Medication,
+    schedule: MedicationSchedule,
+): Promise<string[]> {
+    const ids: string[] = [];
 
-    if (!med.enabled) return result;
+    for (const day of schedule.daysOfWeek) {
+        const trigger = {
+            weekday: day + 1,   // Expo: 1 = Sunday
+            hour: schedule.hour,
+            minute: schedule.minute,
+            repeats: true,
+        } as Notifications.CalendarTriggerInput;
 
-    try {
-        med.schedules.forEach((_schedule, idx) => result.push({ scheduleIdx: idx, ids: [] }));
+        const id = await Notifications.scheduleNotificationAsync({
+            content: {
+                title: `Nhắc uống thuốc: ${med.name}`,
+                body:
+                    `${schedule.hour.toString().padStart(2, '0')}:` +
+                    schedule.minute.toString().padStart(2, '0'),
+                sound: 'default',
+            },
+            trigger,
+        });
 
-        for (let index = 0; index < med.schedules.length; index++) {
-            const schedule = med.schedules[index];
-            const ids: string[] = [];
-
-            for (const day of schedule.daysOfWeek) {
-                const trigger = {
-                    weekday: day + 1,   // Expo: 1 = Sunday
-                    hour: schedule.hour,
-                    minute: schedule.minute,
-                    repeats: true,
-                } as Notifications.CalendarTriggerInput;
-
-                const id = await Notifications.scheduleNotificationAsync({
-                    content: {
-                        title: `Nhắc uống thuốc: ${med.name}`,
-                        body:
-                            `${schedule.hour.toString().padStart(2, '0')}:` +
-                            schedule.minute.toString().padStart(2, '0'),
-                        sound: 'default',
-                    },
-                    trigger,
-                });
-
-                ids.push(id);
-            }
-
-            result[index] = { scheduleIdx: index, ids };
-        }
-    } catch (err) {
-        console.error('scheduleNotificationsForMedication error:', err);
+        ids.push(id);
     }
 
-    return result;
+    return ids;
+}
+
+export async function scheduleNotificationsForMedication(
+    med: Medication
+): Promise<Medication> {
+    if (!med.enabled) {
+        return {
+            ...med,
+            schedules: med.schedules.map((schedule) => ({ ...schedule, notificationIds: [] })),
+        };
+    }
+
+    try {
+        const schedulesWithIds: MedicationSchedule[] = [];
+
+        for (const schedule of med.schedules) {
+            const ids = await scheduleNotificationsForSchedule(med, schedule);
+            schedulesWithIds.push({ ...schedule, notificationIds: ids });
+        }
+
+        return { ...med, schedules: schedulesWithIds };
+    } catch (err) {
+        console.error('scheduleNotificationsForMedication error:', err);
+        return med;
+    }
 }
 
 export async function cancelNotifications(ids: string[]): Promise<void> {
