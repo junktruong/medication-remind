@@ -44,7 +44,6 @@ Màn hình nhập chi tiết hơn về lịch trình (thời gian bắt đầu, 
 
 ## 🛠 Hướng Dẫn Sử Dụng
 
-(Bạn có thể thêm phần hướng dẫn cài đặt và sử dụng ứng dụng của mình tại đây.)
 
 1. **Tải xuống và Cài đặt:** ...
 2. **Thêm Thuốc:** ...
@@ -53,4 +52,4 @@ Màn hình nhập chi tiết hơn về lịch trình (thời gian bắt đầu, 
 
 ## 🧑‍💻 Tác Giả & Cộng Tác
 
-* [Tên Của Bạn/Team] - [Liên kết đến Trang cá nhân/GitHub]
+* [JackieTruong/ JunkTruong] - [https://github.com/junktruong]
