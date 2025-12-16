@@ -26,7 +26,7 @@ export default function HomeScreen() {
                     <MedicationCard
                         medication={item}
                         onPress={() => openEditForm(item.id)}
-                        onToggleEnabled={() => toggleEnabled(item.id)}
+                        onToggleEnabled={(medId, enabled) => toggleEnabled(medId, enabled)}
                     />
                 )}
                 contentContainerStyle={{ padding: 16 }}

@@ -4,20 +4,14 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MedicationSchedule, Weekday } from '../types/medication';
 
 interface Props {
-    schedules: MedicationSchedule[];
-    onChange: (schedules: MedicationSchedule[]) => void;
+    schedule: MedicationSchedule;
+    onChange: (schedule: MedicationSchedule) => void;
+    title?: string;
 }
 
 const labels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
-const DayOfWeekSelector: React.FC<Props> = ({ schedules, onChange }) => {
-    // Nếu chưa có schedule nào → tạo schedule đầu tiên
-    const schedule = schedules[0] ?? {
-        hour: 8,
-        minute: 0,
-        daysOfWeek: [] as Weekday[],
-    };
-
+const DayOfWeekSelector: React.FC<Props> = ({ schedule, onChange, title }) => {
     const toggleDay = (day: Weekday) => {
         const exists = schedule.daysOfWeek.includes(day);
 
@@ -30,12 +24,12 @@ const DayOfWeekSelector: React.FC<Props> = ({ schedules, onChange }) => {
             daysOfWeek: newDays,
         };
 
-        onChange([newSchedule]); // luôn trả mảng schedules
+        onChange(newSchedule);
     };
 
     return (
         <View style={styles.wrapper}>
-            <Text style={styles.label}>Chọn ngày trong tuần</Text>
+            <Text style={styles.label}>{title ?? 'Chọn ngày trong tuần'}</Text>
             <View style={styles.row}>
                 {labels.map((label, idx) => {
                     const active = schedule.daysOfWeek.includes(idx as Weekday);
