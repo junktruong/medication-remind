@@ -10,9 +10,21 @@ interface Props {
 }
 
 const MedicationCard: React.FC<Props> = ({ medication, onPress, onToggleEnabled }) => {
-    const scheduleText = medication.schedules
-        .map(s => `${s.hour.toString().padStart(2, '0')}:${s.minute.toString().padStart(2, '0')}`)
-        .join(' • ');
+    const dayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    const formatSchedule = (schedule: Medication['schedules'][number]) => {
+        const days = schedule.daysOfWeek;
+        const dayText = !days?.length || days.length === 7
+            ? 'Hàng ngày'
+            : days.map((d) => dayLabels[d] ?? '').join(' ');
+
+        const hour = schedule.hour.toString().padStart(2, '0');
+        const minute = schedule.minute.toString().padStart(2, '0');
+
+        return `${dayText} • ${hour}:${minute}`;
+    };
+
+    const scheduleText = medication.schedules.map(formatSchedule).join('  |  ');
 
     return (
         <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>

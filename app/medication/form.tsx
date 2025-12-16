@@ -2,11 +2,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import DayOfWeekSelector from '../../lib/components/DayOfWeekSelector';
+import ScheduleEditorCard from '../../lib/components/ScheduleEditorCard';
 import PhotoSelector from '../../lib/components/PhotoSelector';
 import PrimaryButton from '../../lib/components/PrimaryButton';
 import TextInputField from '../../lib/components/TextInputField';
-import TimePickerField from '../../lib/components/TimePickerField';
 import { colors, fontSize, radius, spacing } from '../../lib/design/tokens';
 import { useMedications } from '../../lib/context/MedicationContext';
 import { MedicationSchedule, Weekday } from '../../lib/types/medication';
@@ -97,35 +96,19 @@ export default function MedicationForm() {
                 <View style={styles.scheduleHeaderRow}>
                     <Text style={styles.sectionTitle}>Lịch uống</Text>
                     <TouchableOpacity style={styles.addButton} onPress={addSchedule}>
-                        <Text style={styles.addButtonText}>+ Add time</Text>
+                        <Text style={styles.addButtonText}>+ Thêm giờ</Text>
                     </TouchableOpacity>
                 </View>
 
                 {schedules.map((schedule, index) => (
-                    <View
+                    <ScheduleEditorCard
                         key={`${index}-${schedule.hour}-${schedule.minute}-${schedule.daysOfWeek.join('-')}`}
-                        style={styles.scheduleCard}
-                    >
-                        <View style={styles.scheduleTitleRow}>
-                            <Text style={styles.scheduleTitle}>Lịch {index + 1}</Text>
-                            <TouchableOpacity
-                                onPress={() => removeSchedule(index)}
-                                disabled={schedules.length <= 1}
-                            >
-                                <Text style={[styles.removeText, schedules.length <= 1 && styles.removeDisabled]}>Xóa</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <TimePickerField
-                            schedule={schedule}
-                            onChange={(value) => updateSchedule(index, value)}
-                            title="Giờ uống"
-                        />
-                        <DayOfWeekSelector
-                            schedule={schedule}
-                            onChange={(value) => updateSchedule(index, value)}
-                            title="Ngày trong tuần"
-                        />
-                    </View>
+                        index={index}
+                        schedule={schedule}
+                        onChange={(value) => updateSchedule(index, value)}
+                        onDelete={() => removeSchedule(index)}
+                        canDelete={schedules.length > 1}
+                    />
                 ))}
             </View>
 
@@ -196,32 +179,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '700',
         fontSize: fontSize.md,
-    },
-    scheduleCard: {
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: radius.md,
-        padding: spacing.md,
-        marginTop: spacing.sm,
-        backgroundColor: colors.surface,
-    },
-    scheduleTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: spacing.sm,
-    },
-    scheduleTitle: {
-        fontSize: fontSize.lg,
-        fontWeight: '700',
-        color: colors.text,
-    },
-    removeText: {
-        color: colors.danger,
-        fontWeight: '600',
-    },
-    removeDisabled: {
-        color: colors.muted,
     },
     actions: {
         gap: spacing.md,
