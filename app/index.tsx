@@ -1,15 +1,18 @@
 // app/index.tsx
-import { useRouter } from 'expo-router';
+import PrimaryButton from '@/lib/components/PrimaryButton';
+import { useSession } from '@/lib/context/SessionContext';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useMemo, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMedications } from '../lib/context/MedicationContext';
-import { countTodayDoses, formatTime, getNextDose, getTodayDoses } from '../lib/utils/scheduleHelpers';
+import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
 import { AdherenceEntry, getLatestAdherence } from '../lib/services/adherenceStorage';
+import { countTodayDoses, formatTime, getNextDose, getTodayDoses } from '../lib/utils/scheduleHelpers';
 
 export default function HomeScreen() {
+    const { reset } = useSession();
     const router = useRouter();
     const { medications } = useMedications();
     const [latestTaken, setLatestTaken] = useState<AdherenceEntry | null>(null);
@@ -54,6 +57,8 @@ export default function HomeScreen() {
                         <Text style={styles.addButtonText}>+ Thêm thuốc</Text>
                     </TouchableOpacity>
                 </View>
+
+                <PrimaryButton title="Quay lại chọn vai trò" onPress={reset} />
 
                 {latestTaken ? (
                     <View style={styles.statusCard}>
