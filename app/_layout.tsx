@@ -12,6 +12,10 @@ export default function RootLayout() {
           options={{ title: 'Nhắc uống thuốc' }}
         />
         <Stack.Screen
+          name="reminder"
+          options={{ title: 'Nhắc uống', headerShown: false }}
+        />
+        <Stack.Screen
           name="medication/form"
           options={{ title: 'Thêm/Sửa thuốc' }}
         />
