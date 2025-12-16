@@ -1,25 +1,52 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Linking, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMedications } from '../lib/context/MedicationContext';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
-import { appendLog } from '../lib/services/intakeLog';
+import { logAdherenceEvent, clearSnoozeState, isSnoozed, setSnoozeUntil } from '../lib/services/adherenceStorage';
+import { loadChildPhone } from '../lib/services/contactStorage';
+import { requestNotificationPermission } from '../lib/services/notificationService';
+import { Weekday } from '../lib/types/medication';
 import { formatTime, getNextDose } from '../lib/utils/scheduleHelpers';
-
 
 const childPhoto = require('../assets/images/react-logo.png');
 const defaultMedicationImage = require('../assets/images/react-logo.png');
 
 export default function ReminderScreen() {
     const router = useRouter();
-    const params = useLocalSearchParams<{ id?: string; verify?: string }>();
+    const params = useLocalSearchParams<{ id?: string; verify?: string; mock?: string }>();
     const { medications } = useMedications();
     const [verificationPhoto, setVerificationPhoto] = useState<string | undefined>();
+    const [childPhone, setChildPhone] = useState<string | null>(null);
+
+    const isMock = params.mock === 'true';
 
     const reminder = useMemo(() => {
+        if (isMock) {
+            const now = new Date();
+            const schedule = {
+                hour: now.getHours(),
+                minute: now.getMinutes(),
+                daysOfWeek: [now.getDay() as Weekday],
+            };
+
+            const medication = {
+                id: 'mock-medication',
+                name: 'Thuốc mẫu',
+                dosage: '1 viên trước bữa ăn',
+                notes: 'Đây là màn hình nhắc uống thử. Bấm các nút để kiểm tra luồng.',
+                schedules: [schedule],
+                enabled: true,
+                createdAt: now.getTime(),
+            };
+
+            return { medication, schedule, date: now };
+        }
+
         if (params.id) {
             const med = medications.find((m) => m.id === params.id);
             if (med) {
@@ -34,46 +61,97 @@ export default function ReminderScreen() {
                 return med && schedule ? { medication: med, schedule, date: nextDate } : null;
             }
         }
+
         return getNextDose(medications);
-    }, [medications, params.id]);
+    }, [isMock, medications, params.id]);
 
     const medication = reminder?.medication;
     const enableVerification = params.verify === 'true';
 
+    useEffect(() => {
+        const loadPhone = async () => {
+            const stored = await loadChildPhone();
+            setChildPhone(stored);
+        };
+
+        loadPhone();
+    }, []);
+
     const handleTaken = async () => {
         if (!medication) return router.back();
-        await appendLog({
+
+        await logAdherenceEvent({
             medicationId: medication.id,
             medicationName: medication.name,
-            takenAt: Date.now(),
+            timestamp: Date.now(),
             action: 'taken',
+            scheduleTime: reminder?.date?.getTime(),
             note: 'Người chăm sóc bấm ĐÃ UỐNG',
         });
-        Alert.alert('Đã ghi nhận', 'Cảm ơn bố/mẹ!');
+        await clearSnoozeState(medication.id);
+        Alert.alert('Đã ghi nhận', 'Cảm ơn bố/mẹ đã xác nhận con đã uống thuốc.');
         router.back();
     };
 
     const handleSnooze = async () => {
-        await appendLog({
-            medicationId: medication?.id,
-            medicationName: medication?.name,
-            takenAt: Date.now(),
+        if (!medication) {
+            router.back();
+            return;
+        }
+
+        const snoozed = await isSnoozed(medication.id);
+        if (snoozed) {
+            Alert.alert('Đã lên lịch', 'Ứng dụng đang chờ nhắc lại sau 5 phút, không cần bấm thêm.');
+            return;
+        }
+
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+            Alert.alert('Cần quyền thông báo', 'Hãy cho phép ứng dụng gửi thông báo để nhắc lại.');
+            return;
+        }
+
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title: `Nhắc lại: ${medication.name}`,
+                body: 'Đã tới lúc uống thuốc, bố/mẹ nhớ nhắc con nhé!',
+                sound: 'default',
+            },
+            trigger: { seconds: 300 },
+        });
+
+        const snoozeUntil = Date.now() + 5 * 60 * 1000;
+        await setSnoozeUntil(medication.id, snoozeUntil);
+
+        await logAdherenceEvent({
+            medicationId: medication.id,
+            medicationName: medication.name,
+            timestamp: Date.now(),
             action: 'snooze',
+            scheduleTime: reminder?.date?.getTime(),
             note: 'Nhắc lại sau 5 phút',
         });
+
         Alert.alert('Sẽ nhắc lại', 'Ứng dụng sẽ nhắc lại sau 5 phút.');
         router.back();
     };
 
     const handleCall = async () => {
-        await appendLog({
+        if (!childPhone) {
+            Alert.alert('Chưa có số điện thoại', 'Hãy lưu số ở màn hình của con để bố/mẹ gọi nhanh.');
+            return;
+        }
+
+        await logAdherenceEvent({
             medicationId: medication?.id,
             medicationName: medication?.name,
-            takenAt: Date.now(),
+            timestamp: Date.now(),
             action: 'call',
+            scheduleTime: reminder?.date?.getTime(),
             note: 'Bố/mẹ chọn gọi con',
         });
-        const telLink = 'tel:';
+
+        const telLink = `tel:${childPhone}`;
         const supported = await Linking.canOpenURL(telLink);
         if (supported) Linking.openURL(telLink);
         else Alert.alert('Gọi con', 'Hãy gọi cho con bằng số đã lưu.');
@@ -89,11 +167,12 @@ export default function ReminderScreen() {
         if (!result.canceled) {
             const uri = result.assets?.[0]?.uri;
             setVerificationPhoto(uri);
-            await appendLog({
+            await logAdherenceEvent({
                 medicationId: medication?.id,
                 medicationName: medication?.name,
-                takenAt: Date.now(),
+                timestamp: Date.now(),
                 action: 'verify',
+                scheduleTime: reminder?.date?.getTime(),
                 note: 'Chụp ảnh kiểm tra thuốc',
             });
             Alert.alert('Đã chụp', 'Kiểm tra nhanh xem có đúng thuốc không.');
@@ -104,9 +183,11 @@ export default function ReminderScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.container}>
-                <View style={styles.mediaCard}>
-                    <Text style={styles.sectionLabel}>Hãy nhìn xem con đã sẵn sàng</Text>
+            <StatusBar barStyle="light-content" />
+            <ScrollView contentContainerStyle={styles.scroll}>
+                <View style={styles.hero}>
+                    <Text style={styles.heroLabel}>Đã đến giờ nhắc con uống thuốc</Text>
+                    <Text style={styles.heroTime}>{reminder?.date ? formatTime(reminder.date) : 'Ngay bây giờ'}</Text>
                     <Image source={childPhoto} style={styles.childPhoto} contentFit="cover" />
                 </View>
 
@@ -116,7 +197,7 @@ export default function ReminderScreen() {
                         <View style={{ flex: 1 }}>
                             <Text style={styles.medName}>{medication?.name ?? 'Thuốc tiếp theo'}</Text>
                             {medication?.dosage ? <Text style={styles.medDosage}>{medication.dosage}</Text> : null}
-                            {reminder?.date ? <Text style={styles.medTime}>Lúc {formatTime(reminder.date)}</Text> : null}
+                            {reminder?.date ? <Text style={styles.medTime}>Hôm nay • {formatTime(reminder.date)}</Text> : null}
                         </View>
                     </View>
 
@@ -131,20 +212,20 @@ export default function ReminderScreen() {
                     {verificationPhoto ? (
                         <Image source={{ uri: verificationPhoto }} style={styles.verifyPreview} contentFit="cover" />
                     ) : null}
-
-                    <View style={styles.actions}>
-                        <TouchableOpacity style={[styles.actionButton, styles.primary]} onPress={handleTaken}>
-                            <Text style={styles.actionText}>✅ ĐÃ UỐNG</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.actionButton, styles.snooze]} onPress={handleSnooze}>
-                            <Text style={styles.actionText}>⏰ NHẮC LẠI 5 PHÚT</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.actionButton, styles.call]} onPress={handleCall}>
-                            <Text style={styles.actionText}>📞 GỌI CON</Text>
-                        </TouchableOpacity>
-                    </View>
                 </View>
-            </View>
+
+                <View style={styles.actions}>
+                    <TouchableOpacity style={[styles.actionButton, styles.primary]} onPress={handleTaken}>
+                        <Text style={styles.actionText}>✅ ĐÃ UỐNG</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.actionButton, styles.snooze]} onPress={handleSnooze}>
+                        <Text style={styles.actionText}>⏰ NHẮC LẠI 5 PHÚT</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.actionButton, styles.call]} onPress={handleCall}>
+                        <Text style={styles.actionText}>📞 GỌI CON</Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -152,43 +233,48 @@ export default function ReminderScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: colors.bg,
+        backgroundColor: '#0f172a',
     },
-    container: {
-        flex: 1,
+    scroll: {
+        flexGrow: 1,
         padding: spacing.lg,
         gap: spacing.lg,
     },
-    mediaCard: {
-        backgroundColor: '#e0f2fe',
+    hero: {
+        backgroundColor: '#1e293b',
         borderRadius: radius.lg,
-        padding: spacing.md,
+        padding: spacing.lg,
+        gap: spacing.sm,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 4,
     },
-    sectionLabel: {
-        fontSize: fontSize.md,
-        color: colors.muted,
-        marginBottom: spacing.sm,
-        fontWeight: '700',
+    heroLabel: {
+        color: '#e2e8f0',
+        fontSize: fontSize.lg,
+        fontWeight: '800',
+        letterSpacing: 0.4,
+    },
+    heroTime: {
+        color: '#38bdf8',
+        fontSize: Platform.OS === 'android' ? 30 : 32,
+        fontWeight: '900',
     },
     childPhoto: {
         width: '100%',
-        height: '100%',
-        minHeight: 220,
+        height: 240,
         borderRadius: radius.md,
+        marginTop: spacing.sm,
     },
     card: {
-        flex: 1,
         backgroundColor: colors.surface,
         borderRadius: radius.lg,
         padding: spacing.xl,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.12,
         shadowRadius: 8,
         elevation: 3,
         gap: spacing.md,
@@ -199,13 +285,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     pillPhoto: {
-        width: 96,
-        height: 96,
+        width: 110,
+        height: 110,
         borderRadius: radius.md,
         backgroundColor: '#e2e8f0',
     },
     medName: {
-        fontSize: Platform.OS === 'android' ? 26 : 28,
+        fontSize: Platform.OS === 'android' ? 28 : 30,
         fontWeight: '900',
         color: colors.text,
     },
@@ -244,10 +330,9 @@ const styles = StyleSheet.create({
     },
     actions: {
         gap: spacing.sm,
-        marginTop: spacing.sm,
     },
     actionButton: {
-        paddingVertical: spacing.lg,
+        paddingVertical: spacing.xl,
         borderRadius: radius.md,
         alignItems: 'center',
     },
