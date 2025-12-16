@@ -2,7 +2,7 @@ import { Medication, MedicationSchedule } from '../types/medication';
 
 const getWeekday = (date: Date) => date.getDay() as MedicationSchedule['daysOfWeek'][number];
 
-const matchesDay = (schedule: MedicationSchedule, date: Date) => {
+export const matchesDay = (schedule: MedicationSchedule, date: Date) => {
     if (!schedule.daysOfWeek || schedule.daysOfWeek.length === 0) return true;
     return schedule.daysOfWeek.includes(getWeekday(date));
 };
@@ -35,6 +35,8 @@ export type NextDoseInfo = {
     date: Date;
 };
 
+export type TodayDoseInfo = NextDoseInfo;
+
 export const getNextDose = (medications: Medication[], from = new Date()): NextDoseInfo | null => {
     let closest: NextDoseInfo | null = null;
 
@@ -51,6 +53,25 @@ export const getNextDose = (medications: Medication[], from = new Date()): NextD
     });
 
     return closest;
+};
+
+export const getTodayDoses = (medications: Medication[], today = new Date()): TodayDoseInfo[] => {
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const entries: TodayDoseInfo[] = [];
+
+    medications.forEach((medication) => {
+        if (!medication.enabled) return;
+        medication.schedules?.forEach((schedule) => {
+            if (!matchesDay(schedule, today)) return;
+            const doseTime = new Date(startOfDay);
+            doseTime.setHours(schedule.hour, schedule.minute, 0, 0);
+            entries.push({ medication, schedule, date: doseTime });
+        });
+    });
+
+    return entries.sort((a, b) => a.date.getTime() - b.date.getTime());
 };
 
 export const formatTime = (date: Date) => {
