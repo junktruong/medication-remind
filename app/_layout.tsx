@@ -1,6 +1,7 @@
 // app/_layout.tsx
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MedicationProvider } from '../lib/context/MedicationContext';
 import { SessionProvider, useSession } from '../lib/context/SessionContext';
 
@@ -8,6 +9,25 @@ const RootNavigation = () => {
   const router = useRouter();
   const segments = useSegments();
   const { role, loading } = useSession();
+  const keepAwakeActiveRef = useRef(false);
+
+  useEffect(() => {
+    activateKeepAwakeAsync()
+      .then(() => {
+        keepAwakeActiveRef.current = true;
+      })
+      .catch((error) => {
+        console.warn('Unable to activate keep awake. Continuing without it.', error);
+      });
+
+    return () => {
+      if (keepAwakeActiveRef.current) {
+        deactivateKeepAwake().catch((error) => {
+          console.warn('Unable to deactivate keep awake.', error);
+        });
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (loading) return;

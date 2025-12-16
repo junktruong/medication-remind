@@ -1,5 +1,6 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 import PrimaryButton from '../lib/components/PrimaryButton';
 import { useSession } from '../lib/context/SessionContext';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';

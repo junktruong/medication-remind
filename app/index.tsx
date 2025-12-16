@@ -1,7 +1,8 @@
 // app/index.tsx
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
 import { useMedications } from '../lib/context/MedicationContext';
 import { countTodayDoses, formatTime, getNextDose, getTodayDoses } from '../lib/utils/scheduleHelpers';
