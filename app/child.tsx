@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import PrimaryButton from '../lib/components/PrimaryButton';
 import { useSession } from '../lib/context/SessionContext';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';

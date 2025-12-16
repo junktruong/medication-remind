@@ -7,7 +7,7 @@ import { Alert, Linking, Platform, ScrollView, StatusBar, StyleSheet, Text, Touc
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMedications } from '../lib/context/MedicationContext';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
-import { logAdherenceEvent, clearSnoozeState, isSnoozed, setSnoozeUntil } from '../lib/services/adherenceStorage';
+import { clearSnoozeState, isSnoozed, logAdherenceEvent, setSnoozeUntil } from '../lib/services/adherenceStorage';
 import { loadChildPhone } from '../lib/services/contactStorage';
 import { requestNotificationPermission } from '../lib/services/notificationService';
 import { Weekday } from '../lib/types/medication';
@@ -72,6 +72,7 @@ export default function ReminderScreen() {
         const loadPhone = async () => {
             const stored = await loadChildPhone();
             setChildPhone(stored);
+
         };
 
         loadPhone();
