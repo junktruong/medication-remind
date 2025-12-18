@@ -1,8 +1,12 @@
 // app/lib/services/notificationService.ts
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Medication, MedicationSchedule } from '../types/medication';
 import { apiFetch } from './apiClient';
 import { getDeviceCredentials } from './deviceCredentials';
+
+const PUSH_TOKEN_KEY = '@pushToken:lastRegistered';
 
 export async function requestNotificationPermission(): Promise<boolean> {
     try {
@@ -92,5 +96,38 @@ export async function registerPushToken(pushToken: string) {
         });
     } catch (error) {
         console.warn('registerPushToken error', error);
+    }
+}
+
+export async function obtainPushToken(): Promise<string> {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+        throw new Error('Push notification permission not granted');
+    }
+
+    const projectId =
+        Constants?.expoConfig?.extra?.eas?.projectId || Constants?.expoConfig?.extra?.projectId;
+    const token = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+    return token.data;
+}
+
+export async function ensurePushTokenRegistered() {
+    try {
+        const token = await obtainPushToken();
+        const lastRegistered = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+
+        if (token !== lastRegistered) {
+            await registerPushToken(token);
+            await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+        }
+    } catch (error) {
+        console.warn('ensurePushTokenRegistered error', error);
     }
 }
