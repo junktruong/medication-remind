@@ -124,7 +124,13 @@ export default function HomeScreen() {
                         <Text style={styles.emptyText}>Chưa có lịch cho hôm nay.</Text>
                     ) : (
                         todayDoses.map((dose) => (
-                            <View key={`${dose.medication.id}-${dose.schedule.scheduleId}`} style={styles.listItem}>
+                            <TouchableOpacity
+                                key={`${dose.medication.id}-${dose.schedule.scheduleId}`}
+                                style={styles.listItem}
+                                onPress={() =>
+                                    router.push({ pathname: '/medication/form', params: { id: dose.medication.id } })
+                                }
+                            >
                                 <Text style={styles.listTime}>{formatTime(dose.date)}</Text>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.listName} numberOfLines={1}>
@@ -136,7 +142,7 @@ export default function HomeScreen() {
                                         </Text>
                                     ) : null}
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         ))
                     )}
                 </View>
