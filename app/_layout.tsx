@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { MedicationProvider } from '../lib/context/MedicationContext';
 import { SessionProvider, useSession } from '../lib/context/SessionContext';
+import { ReminderInstanceProvider } from '../lib/context/ReminderInstanceContext';
 
 const RootNavigation = () => {
   const router = useRouter();
@@ -82,7 +83,9 @@ export default function RootLayout() {
   return (
     <SessionProvider>
       <MedicationProvider>
-        <RootNavigation />
+        <ReminderInstanceProvider>
+          <RootNavigation />
+        </ReminderInstanceProvider>
       </MedicationProvider>
     </SessionProvider>
   );

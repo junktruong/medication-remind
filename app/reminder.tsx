@@ -15,6 +15,8 @@ import { loadChildPhone } from '../lib/services/contactStorage';
 import { requestNotificationPermission } from '../lib/services/notificationService';
 import { Weekday } from '../lib/types/medication';
 import { formatTime, getNextDose } from '../lib/utils/scheduleHelpers';
+import { generateStableId } from '../lib/utils/id';
+import { useReminderInstances } from '../lib/context/ReminderInstanceContext';
 
 const childPhoto = require('../assets/images/react-logo.png');
 const defaultMedicationImage = require('../assets/images/react-logo.png');
@@ -23,6 +25,7 @@ export default function ReminderScreen() {
     const router = useRouter();
     const params = useLocalSearchParams<{ id?: string; verify?: string; mock?: string }>();
     const { medications } = useMedications();
+    const { instances, markTaken } = useReminderInstances();
     const [verificationPhoto, setVerificationPhoto] = useState<string | undefined>();
     const [childPhone, setChildPhone] = useState<string | null>(null);
     const [childPhotoUri, setChildPhotoUri] = useState<string | null>(null);
@@ -35,6 +38,7 @@ export default function ReminderScreen() {
         if (isMock) {
             const now = new Date();
             const schedule = {
+                scheduleId: generateStableId('schedule'),
                 hour: now.getHours(),
                 minute: now.getMinutes(),
                 daysOfWeek: [now.getDay() as Weekday],
@@ -118,8 +122,27 @@ export default function ReminderScreen() {
         playAudioOnce();
     }, [childAudioUri]);
 
+    const currentInstance = useMemo(() => {
+        const dueAt = reminder?.date?.toISOString();
+        const scheduleId = reminder?.schedule?.scheduleId;
+        if (!dueAt || !scheduleId) return null;
+
+        return instances.find((instance) => {
+            if (instance.scheduleId !== scheduleId) return false;
+            return new Date(instance.dueAt).getTime() === new Date(dueAt).getTime();
+        });
+    }, [instances, reminder?.date, reminder?.schedule?.scheduleId]);
+
     const handleTaken = async () => {
-        if (!medication) return router.back();
+        if (!medication || !reminder?.schedule?.scheduleId || !reminder?.date) return router.back();
+
+        await markTaken({
+            instanceId: currentInstance?.id,
+            scheduleId: reminder.schedule.scheduleId,
+            dueAt: reminder.date.toISOString(),
+            medicationId: medication.id,
+            medicationName: medication.name,
+        });
 
         await logAdherenceEvent({
             medicationId: medication.id,

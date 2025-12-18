@@ -11,6 +11,7 @@ import {
     View
 } from 'react-native';
 import { MedicationSchedule } from '../types/medication';
+import { generateStableId } from '../utils/id';
 
 interface Props {
     schedule: MedicationSchedule;
@@ -120,6 +121,7 @@ const WheelPicker: React.FC<WheelProps> = ({ items, initialIndex, onChange, labe
 const TimePickerField: React.FC<Props> = ({ schedule, onChange, title }) => {
     // Ensure we have a schedule
     const currentSchedule = schedule ?? {
+        scheduleId: generateStableId('schedule'),
         hour: 8,
         minute: 0,
         daysOfWeek: [],

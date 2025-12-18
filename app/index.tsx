@@ -117,7 +117,7 @@ export default function HomeScreen() {
                         <Text style={styles.emptyText}>Chưa có lịch cho hôm nay.</Text>
                     ) : (
                         todayDoses.map((dose) => (
-                            <View key={`${dose.medication.id}-${dose.schedule.hour}-${dose.schedule.minute}`} style={styles.listItem}>
+                            <View key={`${dose.medication.id}-${dose.schedule.scheduleId}`} style={styles.listItem}>
                                 <Text style={styles.listTime}>{formatTime(dose.date)}</Text>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.listName}>{dose.medication.name}</Text>

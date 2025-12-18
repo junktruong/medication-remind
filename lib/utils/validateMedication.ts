@@ -13,6 +13,10 @@ export function validateMedicationInput(input: MedicationInput): void {
     }
 
     input.schedules.forEach((s, i) => {
+        if (!s.scheduleId) {
+            errors.push(`Lịch ${i + 1}: Thiếu scheduleId ổn định`);
+        }
+
         if (s.hour < 0 || s.hour > 23 || s.minute < 0 || s.minute > 59) {
             errors.push(`Lịch ${i + 1}: Giờ hoặc phút không hợp lệ`);
         }

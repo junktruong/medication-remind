@@ -1,6 +1,8 @@
 // app/lib/services/notificationService.ts
 import * as Notifications from 'expo-notifications';
 import { Medication, MedicationSchedule } from '../types/medication';
+import { apiFetch } from './apiClient';
+import { getDeviceCredentials } from './deviceCredentials';
 
 export async function requestNotificationPermission(): Promise<boolean> {
     try {
@@ -75,5 +77,20 @@ export async function cancelNotifications(ids: string[]): Promise<void> {
         }
     } catch (err) {
         console.error('cancelNotifications error:', err);
+    }
+}
+
+export async function registerPushToken(pushToken: string) {
+    try {
+        const creds = await getDeviceCredentials();
+        await apiFetch('/api/devices/push-token', {
+            method: 'POST',
+            body: {
+                pushToken,
+                familyId: creds.familyId,
+            },
+        });
+    } catch (error) {
+        console.warn('registerPushToken error', error);
     }
 }
