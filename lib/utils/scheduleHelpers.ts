@@ -1,5 +1,12 @@
 import { Medication, MedicationSchedule } from '../types/medication';
 
+export type DueEvent = {
+    medicationId: string;
+    medicationName: string;
+    scheduleId: string;
+    dueAt: string;
+};
+
 const getWeekday = (date: Date) => date.getDay() as MedicationSchedule['daysOfWeek'][number];
 
 export const matchesDay = (schedule: MedicationSchedule, date: Date) => {
@@ -78,4 +85,40 @@ export const formatTime = (date: Date) => {
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
+};
+
+export const getDueEventsWithinWindow = (
+    medications: Medication[],
+    windowStart: number,
+    windowEnd: number,
+): DueEvent[] => {
+    return medications.flatMap((medication) => {
+        if (!medication.enabled) return [];
+
+        return (medication.schedules ?? [])
+            .flatMap((schedule) => {
+                const offsets = [-1, 0, 1];
+
+                return offsets
+                    .map((offset) => {
+                        const base = new Date();
+                        base.setDate(base.getDate() + offset);
+                        base.setHours(schedule.hour, schedule.minute, 0, 0);
+
+                        if (!matchesDay(schedule, base)) return null;
+
+                        const dueAt = base.getTime();
+                        if (dueAt < windowStart || dueAt > windowEnd) return null;
+
+                        return {
+                            medicationId: medication.id,
+                            medicationName: medication.name,
+                            scheduleId: schedule.scheduleId,
+                            dueAt: new Date(dueAt).toISOString(),
+                        } satisfies DueEvent;
+                    })
+                    .filter(Boolean) as DueEvent[];
+            })
+            .flat();
+    });
 };

@@ -4,6 +4,7 @@
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface MedicationSchedule {
+    scheduleId: string;           // UUID/nanoid ổn định cho schedule
     hour: number;                 // Giờ uống (0–23)
     minute: number;               // Phút uống (0–59)
     daysOfWeek: Weekday[];        // Những ngày uống trong tuần

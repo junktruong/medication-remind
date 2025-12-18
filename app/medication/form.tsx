@@ -10,6 +10,21 @@ import { colors, fontSize, radius, spacing } from '../../lib/design/tokens';
 import { useMedications } from '../../lib/context/MedicationContext';
 import { MedicationSchedule, Weekday } from '../../lib/types/medication';
 import { validateMedicationInput } from '../../lib/utils/validateMedication';
+import { generateStableId } from '../../lib/utils/id';
+
+const createDefaultSchedule = (): MedicationSchedule => ({
+    scheduleId: generateStableId('schedule'),
+    hour: 8,
+    minute: 0,
+    daysOfWeek: [] as Weekday[],
+});
+
+const withScheduleIds = (schedules: MedicationSchedule[]): MedicationSchedule[] => {
+    return schedules.map((schedule) => ({
+        ...schedule,
+        scheduleId: schedule.scheduleId || generateStableId('schedule'),
+    }));
+};
 
 export default function MedicationForm() {
     const router = useRouter();
@@ -23,7 +38,7 @@ export default function MedicationForm() {
     const [notes, setNotes] = useState(existing?.notes ?? '');
     const [photoUri, setPhotoUri] = useState(existing?.photoUri ?? undefined);
     const [schedules, setSchedules] = useState<MedicationSchedule[]>(
-        existing?.schedules?.length ? existing.schedules : [{ hour: 8, minute: 0, daysOfWeek: [] as Weekday[] }]
+        existing?.schedules?.length ? withScheduleIds(existing.schedules) : [createDefaultSchedule()]
     );
     const enabled = existing?.enabled ?? true;
 
@@ -32,7 +47,7 @@ export default function MedicationForm() {
     };
 
     const addSchedule = () => {
-        setSchedules((prev) => [...prev, { hour: 8, minute: 0, daysOfWeek: [] as Weekday[] }]);
+        setSchedules((prev) => [...prev, createDefaultSchedule()]);
     };
 
     const copySchedule = () => {
@@ -42,6 +57,7 @@ export default function MedicationForm() {
             const last = prev[prev.length - 1];
             const duplicate: MedicationSchedule = {
                 ...last,
+                scheduleId: generateStableId('schedule'),
                 daysOfWeek: [...last.daysOfWeek] as Weekday[],
             };
 
@@ -125,7 +141,7 @@ export default function MedicationForm() {
 
                 {schedules.map((schedule, index) => (
                     <ScheduleEditorCard
-                        key={`${index}-${schedule.hour}-${schedule.minute}-${schedule.daysOfWeek.join('-')}`}
+                        key={schedule.scheduleId}
                         index={index}
                         schedule={schedule}
                         onChange={(value) => updateSchedule(index, value)}

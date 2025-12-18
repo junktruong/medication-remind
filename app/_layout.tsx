@@ -2,8 +2,11 @@
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { MedicationProvider } from '../lib/context/MedicationContext';
 import { SessionProvider, useSession } from '../lib/context/SessionContext';
+import { ReminderInstanceProvider } from '../lib/context/ReminderInstanceContext';
+import { ensurePushTokenRegistered } from '../lib/services/notificationService';
 
 const RootNavigation = () => {
   const router = useRouter();
@@ -50,6 +53,20 @@ const RootNavigation = () => {
     }
   }, [loading, role, router, segments]);
 
+  useEffect(() => {
+    if (loading) return;
+
+    ensurePushTokenRegistered().catch(() => undefined);
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        ensurePushTokenRegistered().catch(() => undefined);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [loading]);
+
   if (loading) return null;
 
   return (
@@ -82,7 +99,9 @@ export default function RootLayout() {
   return (
     <SessionProvider>
       <MedicationProvider>
-        <RootNavigation />
+        <ReminderInstanceProvider>
+          <RootNavigation />
+        </ReminderInstanceProvider>
       </MedicationProvider>
     </SessionProvider>
   );

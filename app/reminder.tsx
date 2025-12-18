@@ -4,16 +4,32 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+    Alert,
+    Animated,
+    Linking,
+    Platform,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMedications } from '../lib/context/MedicationContext';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
 
-import { clearSnoozeState, isSnoozed, logAdherenceEvent, setSnoozeUntil } from '../lib/services/adherenceStorage';
+import {
+    clearSnoozeState,
+    isSnoozed,
+    logAdherenceEvent,
+    setSnoozeUntil,
+} from '../lib/services/adherenceStorage';
 import { loadChildAudioUri, loadChildPhotoUri } from '../lib/services/childMediaStorage';
 import { loadChildPhone } from '../lib/services/contactStorage';
 import { requestNotificationPermission } from '../lib/services/notificationService';
 import { Weekday } from '../lib/types/medication';
+import { generateStableId } from '../lib/utils/id';
 import { formatTime, getNextDose } from '../lib/utils/scheduleHelpers';
 
 const childPhoto = require('../assets/images/react-logo.png');
@@ -23,11 +39,25 @@ export default function ReminderScreen() {
     const router = useRouter();
     const params = useLocalSearchParams<{ id?: string; verify?: string; mock?: string }>();
     const { medications } = useMedications();
+
     const [verificationPhoto, setVerificationPhoto] = useState<string | undefined>();
     const [childPhone, setChildPhone] = useState<string | null>(null);
     const [childPhotoUri, setChildPhotoUri] = useState<string | null>(null);
     const [childAudioUri, setChildAudioUri] = useState<string | null>(null);
+
+    // --- audio ---
     const soundRef = useRef<Audio.Sound | null>(null);
+
+    // --- actions reveal after 5s audio ---
+    const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [actionsVisible, setActionsVisible] = useState(false);
+    const [audioStatusText, setAudioStatusText] = useState<string>('Đang phát lời nhắc…');
+    const actionsFade = useRef(new Animated.Value(0)).current;
+
+    // --- bottom sheet hide 10s then show ---
+    const sheetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [sheetVisible, setSheetVisible] = useState(false);
+    const sheetFade = useRef(new Animated.Value(0)).current;
 
     const isMock = params.mock === 'true';
 
@@ -35,6 +65,7 @@ export default function ReminderScreen() {
         if (isMock) {
             const now = new Date();
             const schedule = {
+                scheduleId: generateStableId('schedule'),
                 hour: now.getHours(),
                 minute: now.getMinutes(),
                 daysOfWeek: [now.getDay() as Weekday],
@@ -75,7 +106,6 @@ export default function ReminderScreen() {
     const enableVerification = params.verify === 'true';
 
     useEffect(() => {
-
         const loadMedia = async () => {
             const [storedPhone, storedPhoto, storedAudio] = await Promise.all([
                 loadChildPhone(),
@@ -85,21 +115,63 @@ export default function ReminderScreen() {
             setChildPhone(storedPhone);
             setChildPhotoUri(storedPhoto);
             setChildAudioUri(storedAudio);
-
         };
 
         loadMedia();
 
+        // Bottom sheet: hide first 10s
+        setSheetVisible(false);
+        sheetFade.setValue(0);
+        if (sheetTimerRef.current) clearTimeout(sheetTimerRef.current);
+        sheetTimerRef.current = setTimeout(() => {
+            setSheetVisible(true);
+            Animated.timing(sheetFade, {
+                toValue: 1,
+                duration: 420,
+                useNativeDriver: true,
+            }).start();
+        }, 10000);
+
         return () => {
+            if (sheetTimerRef.current) clearTimeout(sheetTimerRef.current);
+            if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
             if (soundRef.current) {
                 soundRef.current.unloadAsync().catch(() => undefined);
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
+        const resetActions = () => {
+            setActionsVisible(false);
+            actionsFade.setValue(0);
+        };
+
+        const revealActions = () => {
+            setActionsVisible(true);
+            Animated.timing(actionsFade, {
+                toValue: 1,
+                duration: 380,
+                useNativeDriver: true,
+            }).start();
+        };
+
         const playAudioOnce = async () => {
-            if (!childAudioUri) return;
+            resetActions();
+            setAudioStatusText('Đang phát lời nhắc…');
+
+            if (revealTimerRef.current) {
+                clearTimeout(revealTimerRef.current);
+                revealTimerRef.current = null;
+            }
+
+            // Không có audio -> show actions nhanh (nhưng sheet vẫn bị delay 10s)
+            if (!childAudioUri) {
+                setAudioStatusText('Không có ghi âm — hiện nút thao tác.');
+                revealTimerRef.current = setTimeout(revealActions, 600);
+                return;
+            }
 
             try {
                 if (soundRef.current) {
@@ -107,15 +179,26 @@ export default function ReminderScreen() {
                     soundRef.current = null;
                 }
 
-                const { sound } = await Audio.Sound.createAsync({ uri: childAudioUri });
+                const { sound } = await Audio.Sound.createAsync(
+                    { uri: childAudioUri },
+                    { shouldPlay: true }
+                );
                 soundRef.current = sound;
-                await sound.playAsync();
+
+                // Sau đúng 5 giây kể từ lúc bắt đầu play -> show actions
+                revealTimerRef.current = setTimeout(() => {
+                    setAudioStatusText('');
+                    revealActions();
+                }, 9000);
             } catch (error) {
                 console.warn('playChildAudio error', error);
+                setAudioStatusText('Không phát được audio — hiện nút thao tác.');
+                revealTimerRef.current = setTimeout(revealActions, 600);
             }
         };
 
         playAudioOnce();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [childAudioUri]);
 
     const handleTaken = async () => {
@@ -225,49 +308,124 @@ export default function ReminderScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" />
-            <ScrollView contentContainerStyle={styles.scroll}>
-                <View style={styles.hero}>
-                    <Text style={styles.heroLabel}>Đã đến giờ nhắc con uống thuốc</Text>
-                    <Text style={styles.heroTime}>{reminder?.date ? formatTime(reminder.date) : 'Ngay bây giờ'}</Text>
-                    <Image source={reminderPhoto} style={styles.childPhoto} contentFit="cover" />
+            <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+
+            {/* Fullscreen photo */}
+            <View style={styles.bg}>
+                <Image source={reminderPhoto} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+                <View style={styles.darkOverlay} />
+
+                {/* Top info (giữ nguyên, không cần ẩn) */}
+                <View style={styles.topArea}>
+                    <View style={styles.topPill}>
+                        <Text style={styles.topPillText}>⏰ Đã đến giờ nhắc con uống thuốc</Text>
+                    </View>
+
+                    <Text style={styles.timeBig}>
+                        {reminder?.date ? formatTime(reminder.date) : 'Ngay bây giờ'}
+                    </Text>
+
+                    <Text style={styles.audioHint}>{audioStatusText}</Text>
                 </View>
 
-                <View style={styles.card}>
+                {/* Bottom sheet: ẩn 10 giây đầu, rồi mới hiện */}
+                <Animated.View
+                    style={[
+                        styles.sheet,
+                        {
+                            opacity: sheetFade,
+                            transform: [
+                                {
+                                    translateY: sheetFade.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [50, 0],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                    pointerEvents={sheetVisible ? 'auto' : 'none'}
+                >
+                    <View style={styles.sheetGrab} />
+
                     <View style={styles.medHeader}>
                         <Image source={medImage} style={styles.pillPhoto} contentFit="cover" />
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.medName}>{medication?.name ?? 'Thuốc tiếp theo'}</Text>
+                            <Text style={styles.medName} numberOfLines={2}>
+                                {medication?.name ?? 'Thuốc tiếp theo'}
+                            </Text>
                             {medication?.dosage ? <Text style={styles.medDosage}>{medication.dosage}</Text> : null}
-                            {reminder?.date ? <Text style={styles.medTime}>Hôm nay • {formatTime(reminder.date)}</Text> : null}
+                            {reminder?.date ? (
+                                <Text style={styles.medTime}>Hôm nay • {formatTime(reminder.date)}</Text>
+                            ) : null}
                         </View>
                     </View>
 
-                    <Text style={styles.instruction}>{medication?.notes ?? 'Uống sau ăn và uống đủ nước.'}</Text>
+                    <Text style={styles.instruction} numberOfLines={3}>
+                        {medication?.notes ?? 'Uống sau ăn và uống đủ nước.'}
+                    </Text>
 
                     {enableVerification && (
-                        <TouchableOpacity style={styles.verifyButton} onPress={handleVerify}>
-                            <Text style={styles.verifyText}>KIỂM TRA THUỐC</Text>
+                        <TouchableOpacity style={styles.verifyButton} onPress={handleVerify} activeOpacity={0.85}>
+                            <Text style={styles.verifyText}>📸 KIỂM TRA THUỐC</Text>
                         </TouchableOpacity>
                     )}
 
                     {verificationPhoto ? (
                         <Image source={{ uri: verificationPhoto }} style={styles.verifyPreview} contentFit="cover" />
                     ) : null}
-                </View>
 
-                <View style={styles.actions}>
-                    <TouchableOpacity style={[styles.actionButton, styles.primary]} onPress={handleTaken}>
-                        <Text style={styles.actionText}>✅ ĐÃ UỐNG</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionButton, styles.snooze]} onPress={handleSnooze}>
-                        <Text style={styles.actionText}>⏰ NHẮC LẠI 5 PHÚT</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionButton, styles.call]} onPress={handleCall}>
-                        <Text style={styles.actionText}>📞 GỌI CON</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
+                    {/* Actions: appear after 5s */}
+                    <Animated.View
+                        style={[
+                            styles.actions,
+                            {
+                                opacity: actionsFade,
+                                transform: [
+                                    {
+                                        translateY: actionsFade.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [12, 0],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                        pointerEvents={actionsVisible ? 'auto' : 'none'}
+                    >
+                        <TouchableOpacity
+                            style={[styles.actionButton, styles.primary]}
+                            onPress={handleTaken}
+                            activeOpacity={0.85}
+                        >
+                            <Text style={styles.actionText}>✅ ĐÃ UỐNG</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.actionButton, styles.snooze]}
+                            onPress={handleSnooze}
+                            activeOpacity={0.85}
+                        >
+                            <Text style={styles.actionText}>⏰ NHẮC LẠI 5 PHÚT</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.actionButton, styles.call]}
+                            onPress={handleCall}
+                            activeOpacity={0.85}
+                        >
+                            <Text style={styles.actionText}>📞 GỌI CON</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+
+                    {!actionsVisible ? (
+                        <View style={styles.lockRow}>
+                            <View style={styles.lockDot} />
+                            <Text style={styles.lockText}>Nút sẽ hiện sau 5 giây…</Text>
+                        </View>
+                    ) : null}
+                </Animated.View>
+            </View>
         </SafeAreaView>
     );
 }
@@ -275,84 +433,113 @@ export default function ReminderScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#000',
     },
-    scroll: {
-        flexGrow: 1,
-        padding: spacing.lg,
-        gap: spacing.lg,
+
+    bg: {
+        flex: 1,
+        position: 'relative',
+        backgroundColor: '#000',
     },
-    hero: {
-        backgroundColor: '#1e293b',
-        borderRadius: radius.lg,
-        padding: spacing.lg,
+
+    darkOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        // backgroundColor: 'rgba(2, 6, 23, 0.55)',
+    },
+
+    topArea: {
+        paddingTop: Platform.OS === 'android' ? 52 : 18,
+        paddingHorizontal: spacing.lg,
         gap: spacing.sm,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 4,
     },
-    heroLabel: {
+
+    topPill: {
+        alignSelf: 'flex-start',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.22)',
+        paddingHorizontal: spacing.md,
+        paddingVertical: 10,
+        borderRadius: 999,
+    },
+    topPillText: {
         color: '#e2e8f0',
-        fontSize: fontSize.lg,
+        fontSize: fontSize.md,
         fontWeight: '800',
-        letterSpacing: 0.4,
     },
-    heroTime: {
+
+    timeBig: {
         color: '#38bdf8',
-        fontSize: Platform.OS === 'android' ? 30 : 32,
+        fontSize: Platform.OS === 'android' ? 44 : 48,
         fontWeight: '900',
+        letterSpacing: 0.3,
     },
-    childPhoto: {
-        width: '100%',
-        height: 240,
-        borderRadius: radius.md,
-        marginTop: spacing.sm,
+
+    audioHint: {
+        color: 'rgba(226, 232, 240, 0.9)',
+        fontSize: fontSize.md,
+        fontWeight: '700',
     },
-    card: {
-        backgroundColor: colors.surface,
-        borderRadius: radius.lg,
+
+    sheet: {
+        marginTop: 'auto',
+        backgroundColor: 'rgba(255,255,255,0.92)',
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
         padding: spacing.xl,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
-        elevation: 3,
         gap: spacing.md,
     },
+
+    sheetGrab: {
+        alignSelf: 'center',
+        width: 44,
+        height: 5,
+        borderRadius: 99,
+        backgroundColor: 'rgba(15, 23, 42, 0.18)',
+        marginTop: -8,
+        marginBottom: 6,
+    },
+
     medHeader: {
         flexDirection: 'row',
         gap: spacing.md,
         alignItems: 'center',
     },
+
     pillPhoto: {
-        width: 110,
-        height: 110,
+        width: 88,
+        height: 88,
         borderRadius: radius.md,
         backgroundColor: '#e2e8f0',
     },
+
     medName: {
-        fontSize: Platform.OS === 'android' ? 28 : 30,
+        fontSize: Platform.OS === 'android' ? 22 : 24,
         fontWeight: '900',
         color: colors.text,
     },
+
     medDosage: {
-        fontSize: fontSize.lg,
+        fontSize: fontSize.md,
         color: colors.text,
         marginTop: 2,
-    },
-    medTime: {
-        fontSize: fontSize.xl,
-        color: '#0ea5e9',
-        marginTop: spacing.xs,
         fontWeight: '700',
     },
-    instruction: {
-        fontSize: fontSize.lg,
-        color: colors.text,
-        lineHeight: 24,
+
+    medTime: {
+        fontSize: fontSize.md,
+        color: '#0284c7',
+        marginTop: spacing.xs,
+        fontWeight: '800',
     },
+
+    instruction: {
+        fontSize: fontSize.md,
+        color: colors.muted,
+        lineHeight: 22,
+        fontWeight: '700',
+    },
+
     verifyButton: {
         backgroundColor: '#fbbf24',
         paddingVertical: spacing.md,
@@ -360,37 +547,55 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     verifyText: {
-        fontSize: fontSize.lg,
-        fontWeight: '800',
+        fontSize: fontSize.md,
+        fontWeight: '900',
         color: '#78350f',
+        letterSpacing: 0.2,
     },
+
     verifyPreview: {
         width: '100%',
         height: 160,
         borderRadius: radius.md,
         backgroundColor: '#f1f5f9',
     },
+
     actions: {
         gap: spacing.sm,
+        marginTop: spacing.sm,
     },
+
     actionButton: {
-        paddingVertical: spacing.xl,
+        paddingVertical: spacing.lg,
         borderRadius: radius.md,
         alignItems: 'center',
     },
-    primary: {
-        backgroundColor: colors.primary,
-    },
-    snooze: {
-        backgroundColor: '#f97316',
-    },
-    call: {
-        backgroundColor: '#0ea5e9',
-    },
+
+    primary: { backgroundColor: colors.primary },
+    snooze: { backgroundColor: '#f97316' },
+    call: { backgroundColor: '#0ea5e9' },
+
     actionText: {
         color: '#fff',
-        fontSize: Platform.OS === 'android' ? 22 : 24,
+        fontSize: Platform.OS === 'android' ? 20 : 21,
         fontWeight: '900',
         letterSpacing: 0.3,
+    },
+
+    lockRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 2,
+    },
+    lockDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 8,
+        backgroundColor: 'rgba(2, 132, 199, 0.7)',
+    },
+    lockText: {
+        color: 'rgba(15, 23, 42, 0.65)',
+        fontWeight: '800',
     },
 });

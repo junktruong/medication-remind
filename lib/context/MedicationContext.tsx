@@ -4,6 +4,7 @@ import {
     addMedication,
     deleteMedication as deleteMedStorage,
     loadMedications,
+    saveMedications,
     updateMedication as updateMedStorage
 } from '../services/medicationStorage';
 import {
@@ -13,6 +14,7 @@ import {
     scheduleNotificationsForSchedule,
 } from '../services/notificationService';
 import { Medication, MedicationSchedule, Weekday } from '../types/medication';
+import { generateStableId } from '../utils/id';
 
 
 export type MedicationInput = Omit<Medication, 'id' | 'createdAt'>;
@@ -52,9 +54,10 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         med: Medication,
         existing?: Medication,
     ): Promise<MedicationSchedule[]> => {
+        const medWithIds: Medication = { ...med, schedules: ensureScheduleIds(med.schedules ?? []) };
         const existingSchedules = existing?.schedules ?? [];
 
-        if (!med.enabled) {
+        if (!medWithIds.enabled) {
             await Promise.all(
                 existingSchedules.map(async (schedule) => {
                     if (schedule.notificationIds?.length) {
@@ -63,13 +66,13 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 })
             );
 
-            return med.schedules.map((schedule) => ({ ...schedule, notificationIds: [] }));
+            return medWithIds.schedules.map((schedule) => ({ ...schedule, notificationIds: [] }));
         }
 
         const updatedSchedules: MedicationSchedule[] = [];
 
-        for (let index = 0; index < med.schedules.length; index++) {
-            const nextSchedule = med.schedules[index];
+        for (let index = 0; index < medWithIds.schedules.length; index++) {
+            const nextSchedule = medWithIds.schedules[index];
             const prevSchedule = existingSchedules[index];
             const changed = hasScheduleChanged(prevSchedule, nextSchedule);
 
@@ -82,12 +85,12 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 await cancelNotifications(prevSchedule.notificationIds);
             }
 
-            const notificationIds = await scheduleNotificationsForSchedule(med, nextSchedule);
+            const notificationIds = await scheduleNotificationsForSchedule(medWithIds, nextSchedule);
             updatedSchedules.push({ ...nextSchedule, notificationIds });
         }
 
-        if (existingSchedules.length > med.schedules.length) {
-            const removed = existingSchedules.slice(med.schedules.length);
+        if (existingSchedules.length > medWithIds.schedules.length) {
+            const removed = existingSchedules.slice(medWithIds.schedules.length);
             await Promise.all(
                 removed.map(async (schedule) => {
                     if (schedule.notificationIds?.length) {
@@ -100,9 +103,30 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return updatedSchedules;
     };
 
+    const ensureScheduleIds = (schedules: MedicationSchedule[]): MedicationSchedule[] => {
+        return schedules.map((schedule) => ({
+            ...schedule,
+            scheduleId: schedule.scheduleId || generateStableId('schedule'),
+        }));
+    };
+
     const refresh = async () => {
         const data = await loadMedications();
-        setMedications(data);
+        let mutated = false;
+        const normalized = data.map((med) => {
+            const schedules = ensureScheduleIds(med.schedules ?? []);
+            if (!mutated) {
+                mutated = schedules.some((schedule, index) => med.schedules?.[index]?.scheduleId !== schedule.scheduleId);
+            }
+            return {
+                ...med,
+                schedules,
+            };
+        });
+        if (mutated) {
+            await saveMedications(normalized);
+        }
+        setMedications(normalized);
     };
 
     useEffect(() => {
@@ -113,7 +137,8 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         await requestNotificationPermission();
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const createdAt = Date.now();
-        const med: Medication = { id, createdAt, ...input };
+        const schedulesWithIds = ensureScheduleIds(input.schedules ?? []);
+        const med: Medication = { id, createdAt, ...input, schedules: schedulesWithIds };
 
         const medWithNotif = await scheduleNotificationsForMedication(med);
 
@@ -123,8 +148,10 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const updateMedication = async (med: Medication) => {
         const existing = medications.find(m => m.id === med.id);
-        const schedulesWithNotif = await buildSchedulesWithNotifications(med, existing);
-        const medWithNotif: Medication = { ...med, schedules: schedulesWithNotif };
+        const schedulesWithIds = ensureScheduleIds(med.schedules ?? []);
+        const medWithIds: Medication = { ...med, schedules: schedulesWithIds };
+        const schedulesWithNotif = await buildSchedulesWithNotifications(medWithIds, existing);
+        const medWithNotif: Medication = { ...medWithIds, schedules: schedulesWithNotif };
 
         await updateMedStorage(medWithNotif);
         setMedications(prev => prev.map(m => (m.id === med.id ? medWithNotif : m)));

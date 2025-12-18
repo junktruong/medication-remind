@@ -4,7 +4,7 @@ import { useSession } from '@/lib/context/SessionContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMedications } from '../lib/context/MedicationContext';
 import { colors, fontSize, radius, spacing } from '../lib/design/tokens';
@@ -40,14 +40,18 @@ export default function HomeScreen() {
                 const latest = await getLatestAdherence('taken');
                 setLatestTaken(latest);
             };
-
             loadLatest();
         }, []),
     );
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.container}>
+            {/* ✅ Cho phép cuộn toàn màn hình */}
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.container}
+                showsVerticalScrollIndicator={false}
+            >
                 <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.greeting}>Hôm nay uống gì?</Text>
@@ -78,9 +82,11 @@ export default function HomeScreen() {
                                 <Text style={styles.nextTime}>{formatTime(nextDose.date)}</Text>
                                 <Text style={styles.nextPill}>{nextDose.medication.name}</Text>
                             </View>
+
                             {nextDose.medication.dosage ? (
                                 <Text style={styles.nextDetail}>{nextDose.medication.dosage}</Text>
                             ) : null}
+
                             <Text style={styles.nextNote}>
                                 {nextDose.medication.notes || 'Nhắc bố/mẹ bấm ĐÃ UỐNG đúng giờ.'}
                             </Text>
@@ -88,6 +94,7 @@ export default function HomeScreen() {
                             <TouchableOpacity style={styles.primaryAction} onPress={openReminder}>
                                 <Text style={styles.primaryActionText}>Mở nhắc uống</Text>
                             </TouchableOpacity>
+
                             <TouchableOpacity style={styles.secondaryAction} onPress={openTestReminder}>
                                 <Text style={styles.secondaryText}>Test reminder</Text>
                             </TouchableOpacity>
@@ -117,19 +124,32 @@ export default function HomeScreen() {
                         <Text style={styles.emptyText}>Chưa có lịch cho hôm nay.</Text>
                     ) : (
                         todayDoses.map((dose) => (
-                            <View key={`${dose.medication.id}-${dose.schedule.hour}-${dose.schedule.minute}`} style={styles.listItem}>
+                            <TouchableOpacity
+                                key={`${dose.medication.id}-${dose.schedule.scheduleId}`}
+                                style={styles.listItem}
+                                onPress={() =>
+                                    router.push({ pathname: '/medication/form', params: { id: dose.medication.id } })
+                                }
+                            >
                                 <Text style={styles.listTime}>{formatTime(dose.date)}</Text>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.listName}>{dose.medication.name}</Text>
+                                    <Text style={styles.listName} numberOfLines={1}>
+                                        {dose.medication.name}
+                                    </Text>
                                     {dose.medication.dosage ? (
-                                        <Text style={styles.listDosage}>{dose.medication.dosage}</Text>
+                                        <Text style={styles.listDosage} numberOfLines={1}>
+                                            {dose.medication.dosage}
+                                        </Text>
                                     ) : null}
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         ))
                     )}
                 </View>
-            </View>
+
+                {/* ✅ Chừa khoảng cuối để cuộn không bị “kẹt” sát đáy */}
+                <View style={{ height: spacing.xl }} />
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -139,11 +159,18 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.bg,
     },
-    container: {
+
+    // ScrollView style (không bắt buộc nhưng sạch)
+    scroll: {
         flex: 1,
+    },
+
+    // ✅ contentContainerStyle: KHÔNG để flex:1, để nó cao theo nội dung => cuộn được
+    container: {
         padding: spacing.xl,
         gap: spacing.lg,
     },
+
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -259,6 +286,7 @@ const styles = StyleSheet.create({
         fontSize: fontSize.md,
         fontWeight: '700',
     },
+
     listCard: {
         backgroundColor: colors.surface,
         borderRadius: radius.lg,
@@ -269,7 +297,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 5,
         elevation: 2,
-        flex: 1,
+
+        // ✅ QUAN TRỌNG: bỏ flex:1 để card tự tăng chiều cao theo list
+        // flex: 1,
     },
     listHeader: {
         flexDirection: 'row',
