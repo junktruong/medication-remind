@@ -24,12 +24,34 @@ export async function scheduleNotificationsForSchedule(
 ): Promise<string[]> {
     const ids: string[] = [];
 
-    for (const day of schedule.daysOfWeek) {
+    const uniqueDays = [...new Set(schedule.daysOfWeek ?? [])].sort((a, b) => a - b);
+    const now = new Date();
+
+    const getNextStartDate = (weekday: number) => {
+        const next = new Date(now);
+        next.setHours(schedule.hour, schedule.minute, 0, 0);
+
+        // Expo uses 0 = Sunday, but CalendarTriggerInput expects 1 = Sunday
+        const currentWeekday = now.getDay();
+        const daysUntil = (weekday - currentWeekday + 7) % 7;
+        if (daysUntil === 0 && next <= now) {
+            next.setDate(next.getDate() + 7);
+        } else {
+            next.setDate(next.getDate() + daysUntil);
+        }
+
+        return next;
+    };
+
+    for (const day of uniqueDays) {
+        const startDate = getNextStartDate(day);
         const trigger = {
             weekday: day + 1,   // Expo: 1 = Sunday
             hour: schedule.hour,
             minute: schedule.minute,
+            second: 0,
             repeats: true,
+            startDate,
         } as Notifications.CalendarTriggerInput;
 
         const id = await Notifications.scheduleNotificationAsync({
