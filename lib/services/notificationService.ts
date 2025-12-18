@@ -39,6 +39,11 @@ export async function scheduleNotificationsForSchedule(
                     `${schedule.hour.toString().padStart(2, '0')}:` +
                     schedule.minute.toString().padStart(2, '0'),
                 sound: 'default',
+                data: {
+                    type: 'reminder',
+                    medicationId: med.id,
+                    scheduleId: schedule.scheduleId,
+                },
             },
             trigger,
         });
