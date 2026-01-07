@@ -1,4 +1,5 @@
 // app/_layout.tsx
+import * as Notifications from 'expo-notifications';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
@@ -7,6 +8,14 @@ import { MedicationProvider } from '../lib/context/MedicationContext';
 import { SessionProvider, useSession } from '../lib/context/SessionContext';
 import { ReminderInstanceProvider } from '../lib/context/ReminderInstanceContext';
 import { ensurePushTokenRegistered } from '../lib/services/notificationService';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const RootNavigation = () => {
   const router = useRouter();
@@ -66,6 +75,35 @@ const RootNavigation = () => {
 
     return () => subscription.remove();
   }, [loading]);
+
+  useEffect(() => {
+    if (loading || role !== 'parent') return;
+
+    const navigateToReminder = (data: Notifications.NotificationContent['data']) => {
+      const medicationId = typeof data?.medicationId === 'string' ? data.medicationId : undefined;
+      if (!medicationId) return;
+
+      router.push({ pathname: '/reminder', params: { id: medicationId } });
+    };
+
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (response) navigateToReminder(response.notification.request.content.data);
+      })
+      .catch(() => undefined);
+
+    const receivedSub = Notifications.addNotificationReceivedListener((notification) => {
+      navigateToReminder(notification.request.content.data);
+    });
+    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      navigateToReminder(response.notification.request.content.data);
+    });
+
+    return () => {
+      receivedSub.remove();
+      responseSub.remove();
+    };
+  }, [loading, role, router]);
 
   if (loading) return null;
 
